@@ -2,9 +2,10 @@ package database
 
 import (
 	"database/sql"
-	_ "fmt"
 	_ "github.com/go-sql-driver/mysql" // MySQL 驱动
+	_ "github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	_ "time"
 )
 
 var db *sql.DB
@@ -41,15 +42,18 @@ func createTables() {
 
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS private_messages (
-		id INT AUTO_INCREMENT PRIMARY KEY,
+		id VARCHAR(36) PRIMARY KEY,
 		sender_id INT NOT NULL,
 		receiver_id INT NOT NULL,
-		message TEXT NOT NULL,
+		message TEXT,
 		message_type ENUM('文本', '图片', '视频', '语音', '文件') DEFAULT '文本',
+		file_url VARCHAR(255) NULL,
+		reply_to VARCHAR(36) NULL,
 		status ENUM('已发送', '已接收', '已读') DEFAULT '已发送',
 		sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-		FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+		FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY (reply_to) REFERENCES private_messages(id) ON DELETE SET NULL
 	);`)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Fail to create private_messages table")
@@ -57,14 +61,17 @@ func createTables() {
 
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS group_messages (
-		id INT AUTO_INCREMENT PRIMARY KEY,
+		id VARCHAR(36) PRIMARY KEY,
 		sender_id INT NOT NULL,
 		group_id INT NOT NULL,
-		message TEXT NOT NULL,
+		message TEXT,
 		message_type ENUM('文本', '图片', '视频', '语音', '文件') DEFAULT '文本',
+		file_url VARCHAR(255) NULL,
+		reply_to VARCHAR(36) NULL,
 		sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-		FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+		FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+		FOREIGN KEY (reply_to) REFERENCES group_messages(id) ON DELETE SET NULL
 	);`)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Fail to create group_messages table")
